@@ -86,3 +86,9 @@ export type InvoiceForm = {
   amount: number;
   status: 'pending' | 'paid';
 };
+
+export type APITable = {
+  id: string,
+  name: string,
+  url: string,
+}

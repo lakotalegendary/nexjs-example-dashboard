@@ -4,6 +4,7 @@ const {
   customers,
   revenue,
   users,
+  apis,
 } = require('../app/lib/placeholder-data.js');
 const bcrypt = require('bcrypt');
 
@@ -44,6 +45,25 @@ async function seedUsers(client) {
     console.error('Error seeding users:', error);
     throw error;
   }
+}
+
+async function seedAPIs(client){
+  await client.sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
+  const createTable = await client.sql`
+    CREATE TABLE IF NOT EXISTS custom_api (
+      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      url VARCHAR(255) NOT NULL
+    );
+  `;
+
+  const insertedAPIs = await Promise.all(
+    apis.map((api) => client.sql`
+      INSERT INTO custom_api (name, url)
+      VALUES (${api.name}, ${api.url})
+      ON CONFLICT DO NOTHING
+    `)
+  )
 }
 
 async function seedInvoices(client) {

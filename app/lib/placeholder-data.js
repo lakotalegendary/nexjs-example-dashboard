@@ -180,9 +180,14 @@ const revenue = [
   { month: 'Dec', revenue: 4800 },
 ];
 
+const apis = [
+  { name: 'CMD', url: '' }
+]
+
 module.exports = {
   users,
   customers,
   invoices,
   revenue,
+  apis,
 };

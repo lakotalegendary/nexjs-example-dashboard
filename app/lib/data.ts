@@ -7,6 +7,7 @@ import {
   LatestInvoiceRaw,
   User,
   Revenue,
+  APITable,
 } from './definitions';
 import { formatCurrency } from './utils';
 import { unstable_noStore as noStore } from "next/cache";
@@ -91,6 +92,29 @@ export async function fetchCardData() {
 }
 
 const ITEMS_PER_PAGE = 6;
+
+export async function fetchFilteredApis(
+  query: string,
+  currentPage: number,
+) {
+  noStore();
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+  try {
+    const apis = await sql<APITable>`
+      SELECT
+        custom_api.id,
+        custom_api.name,
+        custom_api.url,
+      FROM custom_api
+      ORDER BY custom_api.name
+      LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}
+    `;
+  } catch (error) {
+    console.log('Database error:', error);
+    throw new Error('Failed to fetch APIs');
+  }
+}
+
 export async function fetchFilteredInvoices(
   query: string,
   currentPage: number,
