@@ -48,22 +48,36 @@ async function seedUsers(client) {
 }
 
 async function seedAPIs(client){
-  await client.sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
-  const createTable = await client.sql`
-    CREATE TABLE IF NOT EXISTS custom_api (
-      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-      name VARCHAR(255) NOT NULL,
-      url VARCHAR(255) NOT NULL
-    );
-  `;
+  try {
+    await client.sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
+    const createTable = await client.sql`
+      CREATE TABLE IF NOT EXISTS custom_api (
+        id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        url VARCHAR(255) NOT NULL
+      );
+    `;
 
-  const insertedAPIs = await Promise.all(
-    apis.map((api) => client.sql`
-      INSERT INTO custom_api (name, url)
-      VALUES (${api.name}, ${api.url})
-      ON CONFLICT DO NOTHING
-    `)
-  )
+    console.log(`Created "custom_api" table`);
+
+    const insertedAPIs = await Promise.all(
+      apis.map((api) => client.sql`
+        INSERT INTO custom_api (name, url)
+        VALUES (${api.name}, ${api.url})
+        ON CONFLICT DO NOTHING
+      `)
+    );
+  
+    console.log(`Seeded ${insertedAPIs.length} apis`);
+  
+    return {
+      createTable,
+      apis: insertedAPIs
+    }
+  } catch (error) {
+    console.log(`Error seeding apis`, error);
+    throw error;
+  }
 }
 
 async function seedInvoices(client) {
@@ -187,6 +201,7 @@ async function main() {
   await seedCustomers(client);
   await seedInvoices(client);
   await seedRevenue(client);
+  await seedAPIs(client)
 
   await client.end();
 }
