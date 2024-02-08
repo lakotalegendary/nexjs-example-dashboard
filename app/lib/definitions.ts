@@ -87,8 +87,48 @@ export type InvoiceForm = {
   status: 'pending' | 'paid';
 };
 
+export type State = {
+  errors?: {
+      customerId?: string[],
+      amount?: string[],
+      status?: string[],
+  };
+  message?: string | null;
+}
+
 export type APITable = {
   id: string,
   name: string,
-  url: string,
+  data: string,
+}
+
+export type ApiState = {
+  errors?: {
+    nameApi?: string[],
+    data?: string[],
+  };
+  message?: string | null;
+}
+
+export type ApiForm = {
+  id: string;
+  name: string;
+  data: string;
+}
+
+export type FieldType = {
+  id: string;
+  name: string;
+}
+
+export type Field = {
+  key: string;
+  type: FieldType;
+  parent: Field | null
+}
+
+export type FieldConfig = {
+  type: string,
+  path: string,
+  length?: number,
 }

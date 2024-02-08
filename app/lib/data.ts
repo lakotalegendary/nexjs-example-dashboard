@@ -8,6 +8,8 @@ import {
   User,
   Revenue,
   APITable,
+  ApiForm,
+  FieldType,
 } from './definitions';
 import { formatCurrency } from './utils';
 import { unstable_noStore as noStore } from "next/cache";
@@ -21,7 +23,6 @@ export async function fetchRevenue() {
     // Don't do this in production :)
 
     console.log('Fetching revenue data...');
-    await new Promise((resolve) => setTimeout(resolve, 3000));
 
     const data = await sql<Revenue>`SELECT * FROM revenue`;
 
@@ -93,25 +94,93 @@ export async function fetchCardData() {
 
 const ITEMS_PER_PAGE = 6;
 
+export async function fetchApiById(id: string) {
+  noStore()
+  try {
+    const data = await sql<ApiForm>`
+      SELECT
+        custom_api.id,
+        custom_api.name,
+        custom_api.data
+      FROM custom_api
+      WHERE custom_api.id = ${id};
+    `;
+
+    return data.rows[0]
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch endpoint.');
+  }
+}
+
+export async function fetchApisPages(query: string) {
+  noStore()
+  try {
+    const count = await sql`
+      SELECT COUNT(*)
+      FROM custom_api
+      WHERE
+        custom_api.name ILIKE ${`%${query}%`}
+    `;
+
+    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
+    return totalPages;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch total number of endpoints.');
+  }
+}
+
 export async function fetchFilteredApis(
   query: string,
   currentPage: number,
 ) {
   noStore();
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
   try {
     const apis = await sql<APITable>`
       SELECT
         custom_api.id,
         custom_api.name,
-        custom_api.url,
+        custom_api.data
       FROM custom_api
+      WHERE 
+        custom_api.name ILIKE ${`%${query}%`}
       ORDER BY custom_api.name
       LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}
     `;
+    
+    return apis.rows;
   } catch (error) {
     console.log('Database error:', error);
     throw new Error('Failed to fetch APIs');
+  }
+}
+
+export async function fetchFieldTypes() {
+  noStore();
+  try {
+    const fieldTypes = await sql<FieldType>`
+      SELECT * FROM field_type
+    `;
+    return fieldTypes.rows;
+  } catch (error) {
+    console.log('Database error:', error);
+    throw new Error('Failed to fetch FieldTypes')
+  }
+}
+
+export async function fetchFieldTypeByName(name: string) {
+  noStore();
+  try {
+    const fieldTypes = await sql<FieldType>`
+      SELECT * FROM field_type WHERE name = ${name};
+    `;
+    return fieldTypes.rows[0]
+  } catch(error) {
+    console.log('Database error:', error)
+    throw new Error('Failed to fetch FieldType by name')
   }
 }
 

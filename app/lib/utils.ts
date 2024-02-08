@@ -1,4 +1,4 @@
-import { Revenue } from './definitions';
+import { Field, FieldConfig, Revenue } from './definitions';
 
 export const formatCurrency = (amount: number) => {
   return (amount / 100).toLocaleString('en-US', {
@@ -67,3 +67,80 @@ export const generatePagination = (currentPage: number, totalPages: number) => {
     totalPages,
   ];
 };
+
+export const isArrayField = (value: any) => {
+  return !!value && value.constructor === Array;
+}
+
+export const getType = (value: any) => {
+	const valueToString = Object.prototype.toString;
+	return valueToString.call(value).slice(7, -1).trim().toLowerCase();
+}
+
+export const getTree = (json: any, pathToNode = "root"): FieldConfig[]  => {
+	let result: FieldConfig[] = []
+	pathToNode = ~pathToNode.indexOf("root") ? pathToNode : "root"+pathToNode
+	for(let key in json){
+		const value = json[key]
+		const type = getType(value);
+		const path = `${pathToNode}.${key}`;
+		if(type === 'number' || type === 'string' || type === 'null') {
+			result.push({ type, path });
+		}
+		if(type === 'object') {
+			const childs = getTree(json[key], path)
+      result = [...result, ...childs];
+		}
+		if(type === 'array') {
+			
+			const length = json[key].length;
+			if(!length) {
+				result.push({ type, length, path })
+				continue;
+			}
+			const itemType = getType(value[0]);
+			if(itemType === 'number' || itemType === 'string' || itemType === 'null') {
+				result.push({
+					type: itemType,
+					length: length,
+					path: path
+				})
+			}
+			if(itemType === 'object') {
+				result.push({
+					type: type,
+					length: length,
+					path: path,
+				})
+				const childs = getTree(value[0], path)
+				result = [...result, ...childs];
+			}
+		}
+	}
+	return result.flat(Infinity);
+}
+
+export const processField = (key: string, schema: any, parent: any) => {
+  let result = [];
+	const value = schema[key];
+	const { type, items, properties } = value;
+	console.log(`
+    key: ${key}
+    type: ${type}
+    ${parent? `parent: ${parent}` : '' }
+  `)
+  
+	if(items) {
+		console.log(`its array of ${items.type}`)
+		if(items.type === 'object') 
+			for(let k in properties) {
+				processField(k, properties, key)
+			}
+	}
+	if(properties) {
+		console.log(`its object, process childs`)
+		for(let k in properties) {
+			processField(k, properties, key)
+		}
+	}
+}

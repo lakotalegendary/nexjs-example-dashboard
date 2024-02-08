@@ -180,8 +180,14 @@ const revenue = [
   { month: 'Dec', revenue: 4800 },
 ];
 
-const apis = [
-  { name: 'CMD', url: '' }
+const apis = []
+
+const fieldTypes = [
+  'integer',
+  'string',
+  'array',
+  'object',
+  'null'
 ]
 
 module.exports = {
@@ -190,4 +196,5 @@ module.exports = {
   invoices,
   revenue,
   apis,
+  fieldTypes,
 };

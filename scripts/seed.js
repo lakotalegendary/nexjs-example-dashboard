@@ -5,8 +5,24 @@ const {
   revenue,
   users,
   apis,
+  fieldTypes,
 } = require('../app/lib/placeholder-data.js');
 const bcrypt = require('bcrypt');
+
+async function clearOldSeeds(client){
+  try {
+    await client.sql`
+      DROP TABLE IF EXISTS revenue;
+      DROP TABLE IF EXISTS invoices;
+      DROP TABLE IF EXISTS customers;
+      DROP TABLE IF EXISTS custom_api;
+      DROP TABLE IF EXISTS field_type;
+    `;
+    console.log('old values cleared')
+  } catch (error) {
+    console.log('Database error', error)
+  }
+}
 
 async function seedUsers(client) {
   try {
@@ -43,39 +59,6 @@ async function seedUsers(client) {
     };
   } catch (error) {
     console.error('Error seeding users:', error);
-    throw error;
-  }
-}
-
-async function seedAPIs(client){
-  try {
-    await client.sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
-    const createTable = await client.sql`
-      CREATE TABLE IF NOT EXISTS custom_api (
-        id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        url VARCHAR(255) NOT NULL
-      );
-    `;
-
-    console.log(`Created "custom_api" table`);
-
-    const insertedAPIs = await Promise.all(
-      apis.map((api) => client.sql`
-        INSERT INTO custom_api (name, url)
-        VALUES (${api.name}, ${api.url})
-        ON CONFLICT DO NOTHING
-      `)
-    );
-  
-    console.log(`Seeded ${insertedAPIs.length} apis`);
-  
-    return {
-      createTable,
-      apis: insertedAPIs
-    }
-  } catch (error) {
-    console.log(`Error seeding apis`, error);
     throw error;
   }
 }
@@ -194,14 +177,74 @@ async function seedRevenue(client) {
   }
 }
 
+async function seedAPIs(client){
+  try {
+    await client.sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
+    const createTable = await client.sql`
+      CREATE TABLE IF NOT EXISTS custom_api (
+        id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        data TEXT NOT NULL
+      );
+    `;
+
+    console.log(`Created "custom_api" table`);
+
+    const insertedAPIs = await Promise.all(
+      apis.map((api) => client.sql`
+        INSERT INTO custom_api (name, data)
+        VALUES (${api.name}, ${api.data})
+        ON CONFLICT DO NOTHING
+      `)
+    );
+  
+    console.log(`Seeded ${insertedAPIs.length} apis`);
+  
+    return {
+      createTable,
+      apis: insertedAPIs
+    }
+  } catch (error) {
+    console.log(`Error seeding apis`, error);
+    throw error;
+  }
+}
+
+async function seedFieldTypes(client) {
+  try {
+    await client.sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
+    const createTable = await client.sql`
+      CREATE TABLE IF NOT EXISTS field_type (
+        id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+        name VARCHAR(255) NOT NULL
+      );
+    `;
+    console.log(`Created "field_type" table`);
+
+    const insertedFieldTypes = await Promise.all(
+      fieldTypes.map((fieldType) => client.sql`
+        INSERT INTO field_type (name)
+        VALUES (${fieldType})
+        ON CONFLICT DO NOTHING
+      `)
+    )
+  } catch(error) {
+    console.log(`Error seeding field types`, error);
+    throw error;
+  }
+}
+
 async function main() {
   const client = await db.connect();
+
+  await clearOldSeeds(client);
 
   await seedUsers(client);
   await seedCustomers(client);
   await seedInvoices(client);
   await seedRevenue(client);
-  await seedAPIs(client)
+  await seedAPIs(client);
+  await seedFieldTypes(client);
 
   await client.end();
 }

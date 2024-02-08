@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { sql } from '@vercel/postgres'
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { State, ApiState } from './definitions';
 
 export async function authenticate(
     prevState: string | undefined,
@@ -41,15 +42,6 @@ const FormSchema = z.object({
 })
 
 const CreateInvoice = FormSchema.omit({ id: true, date: true })
-
-export type State = {
-    errors?: {
-        customerId?: string[],
-        amount?: string[],
-        status?: string[],
-    };
-    message?: string | null;
-}
 
 export async function createInvoice(prevState: State, formData: FormData) {
     const validatedFields = CreateInvoice.safeParse({
@@ -127,6 +119,95 @@ export async function deleteInvoice(id: string) {
     } catch (error) {
         return {
             message: 'Database error: Failed to delete invoice'
+        }
+    }
+}
+
+const ApiFormSchema = z.object({
+    id: z.string(),
+    nameApi: z.string({
+        invalid_type_error: 'Необходимо указать Имя',
+    }).min(3, {
+        message: 'Необходимо указать Имя (как минимум 3 символа)'
+    }),
+    data: z.string({
+        invalid_type_error: 'Необходимо указать JSON'
+    }).min(10, {
+        message: 'Необходимо заполнить JSON'
+    })
+});
+
+const CreateApi = ApiFormSchema.omit({ id: true })
+const UpdateApi = ApiFormSchema.omit({ id: true })
+
+export async function createApi(prevState: ApiState, formData: FormData) {
+    const validatedFields = CreateApi.safeParse({
+        nameApi: formData.get('nameApi'),
+        data: formData.get('data'),
+    });
+    if(!validatedFields.success) {
+        return {
+            errors: validatedFields.error.flatten().fieldErrors,
+            message: 'Не заполнены обязательные поля'
+        };
+    }
+
+    const { nameApi, data } = validatedFields.data;
+        
+    try {
+        await sql`
+            INSERT INTO custom_api (name, data)
+            VALUES (${nameApi}, ${data})
+        `;
+    } catch (error) {
+        return {
+            message: 'Database Error: Failed to Create API'
+        }
+    }
+
+    revalidatePath('/dashboard/endpoints')
+    redirect('/dashboard/endpoints')
+}
+
+export async function updateApi(id: string, prevState: ApiState, formData: FormData) {
+    const validatedFields = UpdateApi.safeParse({
+        nameApi: formData.get('nameApi'),
+        data: formData.get('data'),
+    })
+    if(!validatedFields.success) {
+        return {
+            errors: validatedFields.error.flatten().fieldErrors,
+            mesage: 'Missing fields. Failed to update invoice'
+        }
+    }
+
+    const { nameApi, data } = validatedFields.data;
+
+    try {
+        await sql`
+            UPDATE custom_api SET name = ${nameApi}, url = ${data}
+            WHERE id = ${id}
+        `;
+    } catch (error) {
+        return {
+            message: 'Database error. Failed to update API',
+        };
+    }
+
+    revalidatePath('/dashboard/endpoints');
+    redirect('/dashboard/endpoints');
+}
+
+export async function deleteApi(id: string) {
+    try {
+        await sql`
+            DELETE FROM custom_api WHERE id = ${id}
+        `;
+        revalidatePath('/dashboard/endpoints')
+        return { message: 'API deleted successfully' }
+    } catch(error) {
+        return {
+            message: 'Database error: Failed to delete API'
         }
     }
 }
